@@ -1,0 +1,151 @@
+﻿Training and testing of clustering models with the KPC-A* and with the SKC** methods
+
+* Kernel clustering with approximate pseudo-centres (KPC-A)
+** Semi-supervised kernel clustering with sample-to-cluster weights (SKC)
+
+The main purpose of this software is to replicate the experiments done in the publications listed below.
+The second purpose of this software is to allow others to re-use this software under the MIT license (see LICENSE).
+In case of re-use I kindly ask to cite the references below, where appropriate.
+
+Warning: The source code may consist of dead code, unused code (including unused parameters), wrongly documented code, 
+or simply not working code parts. In short, it is (mainly) written for replicating the experiments and has not been (much) 
+cleaned-up afterwards. No guarantees whatsoever.
+
+Currently supported baseline kernel methods: Kernel K-means (KKM), kernel fuzzy C-means (KFCM), relational neural gas (RNG).
+Supported kernel functions: Linear kernel, (normalized) polynomial kernel, Gaussian kernel.
+Evaluated data sets (all available from UCI): Gas, Pen, Cardiotocography, Activity, MiniBooNE.
+
+I) Publications
+
+The software were used for the following articles:
+
+[1] Faußer, S. and Schwenker, F. (2012). "Clustering large datasets with kernel methods". 
+    In: Proceedings 21st International Conference on Pattern Recognition. (Tsukuba, Japan). ICPR ’12. IEEE Computer Society, pp. 501–504.
+	
+[2] Faußer, S. and Schwenker, F. (2012). "Semi-Supervised Kernel Clustering with Sample-to-cluster Weights". 
+    In: Proceedings 1st IAPR TC3 Conference on Partially Supervised Learning. (Ulm, Germany). PSL’11. Springer, pp. 72–81. doi: 10.1007/978-3-642-28258-4_8.
+
+[3] Faußer, S. and Schwenker, F. (2014) "Semi-supervised Clustering of Large Data Sets with Kernel Methods". 
+    In: Pattern Recognition Letters 37, pp. 78–84. doi: 10.1016/j.patrec.2013.01.007.
+
+[4] Faußer, S. (2015). "Large state spaces and large data: Utilizing neural network ensembles in reinforcement learning and kernel methods for clustering". 
+    Doctoral thesis. URN: urn:nbn:de:bsz:289-vts-96149. URL: http://vts.uni-ulm.de/doc.asp?id=9614.
+
+In [1], the KPC-A method was introduced and in [2,3], the SKC method were proposed. 
+Note that this software can be used to replicate the results of [4] only. 
+Due to a lost seed, however, you won't get the very same results as in [4]. 
+Still, with the seed set in this software, the results are in many cases identical to [4] or very close to them.
+
+II) Required development / running system
+
+- GNU/Linux OS (for example Debian or Ubuntu) with the following development tools: gcc, make, R. 
+  Windows OS with Rtools might be a replacement but this is untested.
+- R packages: doRNG, doParallel, R.utils.
+- Minimum 16 GByte memory.
+
+III) Steps for reproducing the experiments
+
+1. Preparations
+
+- Get the required datasets from the UCI repository and extract the archives
+- Modify the paths in the '.preprocess' functions in the file 'pkpc_datasets.R'
+- Set the number of cores of your machine, see 'registerDoParallel' in the file 'pkpc.R'
+- Build the shipped C files with 'R CMD SHLIB file.c'
+
+2. Evaluating the baseline kernel methods and kernel functions
+
+(Optional) Preparations: Remove old labels directory:
+
+$ rm -Rf labelsTmp/
+
+In R:
+
+Load the R file: 
+> source("pkpc_experiments_eval_basic.R")
+
+Start the training with the baseline kernel clustering methods:
+> pkpc.start.eval.cardiotocography()
+where 'cardiotocography' refers to the Cardiotocography data set. 
+The evaluated parameters may be changed by modifying 'pkpc.start.eval.cardiotocography' in the file 'pkpc_experiments_eval_basic.R'.
+
+Get the results, generate EPS graphs:
+> pkpc.start.eval.evaluation("cardiotocography", c(1,3,5), legendLocationARI="topright", legendLocationARI2="topright")
+where the second argument 'c(1,3,5)' refers to three values of the parameter sigma for the Gaussian kernel.
+
+3. Train the clustering models with the KPC-A models and evaluate the results
+
+In R:
+
+Load the R file:
+> source("pkpc_experiments.R")
+
+3.1 Start the training with the KPC-A clustering methods
+
+3.1.1 Evaluate the basic kernel methods (KKM, KFCM, RNG)
+> pkpc.test.unsupervised("activity", basicOnly = TRUE)
+where 'activity' refers to the Activity data set. 
+The evaluated parameters may be changed by modifying 'pkpc.test.activity.start' in the file 'pkpc_experiments.R'
+
+3.1.2 Evaluate the weights with KPC-A(KKM)
+> pkpc.test.unsupervised("activity", eval = 1)
+
+3.1.3 Evaluate the number of data chunks with KPC-A(KKM)
+> pkpc.test.unsupervised("activity", eval = 2)
+
+3.1.4 Train KPC-A models with different sizes of L for each kernel methods, i.e. KKM, KFCM and RNG.
+> pkpc.test.unsupervised("activity") 
+
+3.2 Evaluate the results
+
+Get the results of the evaluation of the number of data chunks, generate an EPS graph:
+> pkpc.test.evaluation.maxDataChunks("activity", "some date string")
+where 'activity' refers to the Activity data set and "some date string" refers to the date of the result file 
+retrieved by evaluating the number of data chunks, see 3.1.3 above.
+
+Get the results of the evaluation of the distances between the approximate centres and the exact centres, generate an EPS graph:
+> pkpc.test.evaluation.dist(c("cardiotocography", "gas", "pen", "miniboone", "activity"),
+  c("date cardiotocography", "date gas", "date pen", "date miniboone", "date activity"))
+where the first vector has the evaluated data sets and the second vector has the dates of the result files 
+of the respective data sets retrieved by training the KPC-A models, see 3.1.4 above.
+
+Get the results of the KPC-A method, generate rows of a LaTeX table in standard output:
+> pkpc.test.evaluation("activity", c("some date string basic", "some date string KPC-A"))
+where 'activity' refers to the Activity data set, "some date string basic" refers to the date of the result file
+retrieved by evaluating the basic kernel methods, see 3.1.3 above and "some date string KPC-A" 
+refers to the date of the result file retrieved by evaluating the KPC-A models, see 3.1.4 above.
+
+4. Train the clustering methods with the SKC models and evaluate the results
+
+In R:
+
+Load the R file:
+
+> source("pkpc_experiments.R")
+
+4.1 Start the training with the SKC clustering methods
+
+4.1.1 Evaluate the basic kernel methods (KKM, KFCM, RNG)
+See 3.1.1. Only applies when 3.1.1 not already done.
+
+4.1.2 Evaluate the gamma parameter (strength of influence over the distances) with SKC(KKM)
+> pkpc.test.semisupervised("activity", eval = TRUE)
+where 'activity' refers to the Activity data set. 
+The evaluated parameters may be changed by modifying 'pkpc.test.activity.start' in the file 'pkpc_experiments.R'
+
+4.1.3 Train SKC models with different sizes of utilized class labels for each kernel methods, i.e. KKM, KFCM and RNG
+> pkpc.test.semisupervised("activity")
+
+4.2 Evaluate the results
+
+Get the results of the evaluation of the gamma parameter, generate EPS graphs:
+> pkpc.semisupervised.evaluation(c("cardiotocography", "gas", "pen", "activity", "miniboone"),
+  c("date cardiotocography", "date gas", "date pen", "date activity", "date miniboone"), 
+  shiftARI=c(0,0,-0.3,0,-0.1), shiftDBI=c(0,0,0,0,-0.1))
+where the first vector has the evaluated data sets and the second vector has the dates of the result files 
+of the respective data sets retrieved by evaluating the labelled-unlabelled factor, see 4.1.2.
+
+Get the results of the SKC method, generate rows of a LaTeX table in standard output:
+> pkpc.test.evaluation("activity", c("some date string basic", "some date string SKC"), semisupervised = TRUE, baselineSamples = 1000)
+where 'activity' refers to the Activity data set, "some date string basic" refers to the date of the result file
+retrieved by evaluating the basic kernel methods, see 4.1.1 above and "some date string SKC" refers to the date
+of the result file retrieved by evaluating the SKC models, see 4.1.3 above.
